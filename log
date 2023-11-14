@@ -1,0 +1,38 @@
+   Compiling files v0.1.0 (D:\Desktop\projects\files)
+warning: unused import: `path::PathBuf`
+ --> src\main.rs:1:22
+  |
+1 | use std::{io::Write, path::PathBuf};
+  |                      ^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+warning: unused variable: `input_handle`
+  --> src\main.rs:14:25
+   |
+14 |     let (output_handle, input_handle) = handles();
+   |                         ^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_input_handle`
+   |
+   = note: `#[warn(unused_variables)]` on by default
+
+warning: `files` (bin "files") generated 2 warnings (run `cargo fix --bin "files"` to apply 2 suggestions)
+    Finished dev [unoptimized + debuginfo] target(s) in 1.14s
+     Running `C:\Users\Bay\.cargo\build_cache\debug\files.exe`
+1
+2
+3
+4
+5
+4
+3
+2
+1
+0
+1
+2
+3
+4
+5
+[src\main.rs:79] &dir = "D:\\Desktop\\projects\\files\\.git"
+[src\main.rs:79] index = 0
+0
