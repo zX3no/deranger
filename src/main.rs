@@ -99,35 +99,40 @@ fn main() {
                         pages[RIGHT].index = 0;
                     }
                     Event::Left => {
-                        dir = dir.parent().unwrap().to_path_buf();
-
-                        let c = std::mem::take(&mut pages[MIDDLE]);
-                        pages[RIGHT] = c;
-
-                        let p = std::mem::take(&mut pages[LEFT]);
-                        pages[MIDDLE] = p;
-
                         if let Some(parent) = dir.parent() {
-                            pages[LEFT].files = get_dir(parent.to_str().unwrap());
-                            pages[LEFT]
-                                .set_index(pages[MIDDLE].current().parent().unwrap().to_path_buf());
+                            dir = parent.to_path_buf();
+
+                            let c = std::mem::take(&mut pages[MIDDLE]);
+                            pages[RIGHT] = c;
+
+                            let p = std::mem::take(&mut pages[LEFT]);
+                            pages[MIDDLE] = p;
+
+                            if let Some(parent) = dir.parent() {
+                                pages[LEFT].files = get_dir(parent.to_str().unwrap());
+                                pages[LEFT].set_index(
+                                    pages[MIDDLE].current().parent().unwrap().to_path_buf(),
+                                );
+                            }
                         }
                     }
-                    Event::Right => {
-                        // A -> B -> C
-                        // B -> C -> D
-                        // A(LEFT) is deleted. D(RIGHT) is created.
-                        // C(Right) has the wrong index!
+                    Event::Right if pages[MIDDLE].current().is_dir() => {
+                        let next = get_dir(pages[MIDDLE].current().to_str().unwrap());
 
-                        dir = pages[MIDDLE].current();
+                        if !next.is_empty() {
+                            dir = pages[MIDDLE].current();
 
-                        let middle = std::mem::take(&mut pages[MIDDLE]);
-                        pages[LEFT] = middle;
+                            pages[LEFT] = std::mem::take(&mut pages[MIDDLE]);
+                            pages[MIDDLE] = std::mem::take(&mut pages[RIGHT]);
 
-                        let right = std::mem::take(&mut pages[RIGHT]);
-                        pages[MIDDLE] = right;
-
-                        pages[RIGHT].files = get_dir(pages[MIDDLE].current().to_str().unwrap());
+                            let right = pages[MIDDLE].current();
+                            if right.is_dir() {
+                                pages[RIGHT].files = get_dir(right.to_str().unwrap());
+                                pages[RIGHT].index = 0;
+                            } else {
+                                pages[RIGHT] = Default::default();
+                            }
+                        }
                     }
                     Event::Char('c') if state.ctrl() => break,
                     Event::Escape => break,
