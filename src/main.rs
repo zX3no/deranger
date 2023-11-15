@@ -1,4 +1,4 @@
-use std::{io::Write, path::PathBuf};
+use std::{io::Write, path::Path};
 use winter::*;
 use winwalk::*;
 
@@ -13,19 +13,28 @@ pub struct Page {
 }
 
 impl Page {
-    #[track_caller]
-    pub fn current(&self) -> PathBuf {
-        self.files[self.index].path.clone()
+    pub fn current(&self) -> &str {
+        self.files[self.index].path.as_str()
     }
 
-    fn set_index(&mut self, current: PathBuf) {
-        self.index = self
+    pub fn current_path(&self) -> &Path {
+        Path::new(self.files[self.index].path.as_str())
+    }
+
+    fn set_index(&mut self, current: &Path) -> Result<(), ()> {
+        let index = self
             .files
             .iter()
             .enumerate()
-            .find(|(_, file)| file.path == current)
-            .unwrap()
-            .0;
+            .find(|(_, file)| Path::new(&file.path) == current);
+
+        match index {
+            Some((index, _)) => {
+                self.index = index;
+                Ok(())
+            }
+            None => Err(()),
+        }
     }
 }
 
@@ -56,6 +65,7 @@ fn main() {
     let mut stdout = std::io::stdout();
     init(&mut stdout);
 
+    std::env::set_current_dir("C:\\").unwrap();
     let mut dir = std::env::current_dir().unwrap();
     let mut pages: [Page; 3] = Default::default();
 
@@ -64,19 +74,22 @@ fn main() {
         index: 0,
     };
 
-    let prev_path = dir.parent().unwrap().to_str().unwrap();
-    pages[LEFT] = Page {
-        files: get_dir(prev_path),
-        index: 0,
-    };
+    if let Some(parent) = dir.parent() {
+        pages[LEFT] = Page {
+            files: get_dir(parent.to_str().unwrap()),
+            index: 0,
+        };
 
-    //Make sure the previous directory has the current index.
-    pages[LEFT].set_index(pages[MIDDLE].current().parent().unwrap().to_path_buf());
+        //Make sure the previous directory has the current index.
+        let _ = pages[LEFT].set_index(parent);
+    }
 
-    pages[RIGHT] = Page {
-        files: get_dir(pages[MIDDLE].files[0].path.to_str().unwrap()),
-        index: 0,
-    };
+    if let Some(first) = pages[MIDDLE].files.first() {
+        pages[RIGHT] = Page {
+            files: get_dir(&first.path),
+            index: 0,
+        };
+    }
 
     loop {
         //Draw the widgets into the front buffer.
@@ -90,12 +103,12 @@ fn main() {
                         if pages[MIDDLE].index != 0 {
                             pages[MIDDLE].index -= 1;
                         }
-                        pages[RIGHT].files = get_dir(pages[MIDDLE].current().to_str().unwrap());
+                        pages[RIGHT].files = get_dir(pages[MIDDLE].current());
                         pages[RIGHT].index = 0;
                     }
                     Event::Down if pages[MIDDLE].index + 1 < pages[MIDDLE].files.len() => {
                         pages[MIDDLE].index += 1;
-                        pages[RIGHT].files = get_dir(pages[MIDDLE].current().to_str().unwrap());
+                        pages[RIGHT].files = get_dir(pages[MIDDLE].current());
                         pages[RIGHT].index = 0;
                     }
                     Event::Left => {
@@ -110,22 +123,21 @@ fn main() {
 
                             if let Some(parent) = dir.parent() {
                                 pages[LEFT].files = get_dir(parent.to_str().unwrap());
-                                pages[LEFT].set_index(
-                                    pages[MIDDLE].current().parent().unwrap().to_path_buf(),
-                                );
+                                let p = pages[MIDDLE].current_path().to_owned();
+                                pages[LEFT].set_index(p.parent().unwrap()).unwrap();
                             }
                         }
                     }
-                    Event::Right if pages[MIDDLE].current().is_dir() => {
-                        let next = get_dir(pages[MIDDLE].current().to_str().unwrap());
+                    Event::Right if pages[MIDDLE].current_path().is_dir() => {
+                        let next = get_dir(pages[MIDDLE].current());
 
                         if !next.is_empty() {
-                            dir = pages[MIDDLE].current();
+                            dir = pages[MIDDLE].current_path().to_owned();
 
                             pages[LEFT] = std::mem::take(&mut pages[MIDDLE]);
                             pages[MIDDLE] = std::mem::take(&mut pages[RIGHT]);
 
-                            let right = pages[MIDDLE].current();
+                            let right = pages[MIDDLE].current_path();
                             if right.is_dir() {
                                 pages[RIGHT].files = get_dir(right.to_str().unwrap());
                                 pages[RIGHT].index = 0;
@@ -188,7 +200,7 @@ fn draw(area: Rect, buffer: &mut Buffer, pages: &[Page]) {
     );
 
     //Draw the current path
-    let lines: Lines<'_> = text!("{}", pages[MIDDLE].current().display())
+    let lines: Lines<'_> = text!("{}", pages[MIDDLE].current_path().display())
         .into_lines()
         .block(None, Borders::ALL, Rounded);
     lines.draw(h[0], buffer);

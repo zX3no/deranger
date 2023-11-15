@@ -1,5 +1,5 @@
 [package]
-name = "files"
+name = "deranger"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,4 +7,4 @@ edition = "2021"
 
 [dependencies]
 winter = { version = "0.1.0", path = "../winter" }
-winwalk = { version = "0.1.0", path = "../winwalk" }
+winwalk = { version = "0.2.1", path = "../winwalk" }
